@@ -1,0 +1,5 @@
+﻿#!/bin/sh
+# Novo Hook Modular
+ACTION_SCRIPT="Z:/gitHooks/actions/GenerateCommitMsg.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ACTION_SCRIPT" "$1" "$2"
+exit 0

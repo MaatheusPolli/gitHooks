@@ -1,0 +1,145 @@
+param(
+    [Parameter(Position = 0)]
+    [string]$arg1,
+    [Parameter(Position = 1)]
+    [string]$arg2,
+    [Parameter(Position = 2)]
+    [string]$arg3
+)
+
+# 1. Configura Core e Diretorio
+$BaseDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Definition)
+
+# 1.1 Configura Encodings do PowerShell para evitar Mojibake ao ler STDOUT de programas externos (gemini.exe, etc)
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
+# Detecção de quem chamou (Git prepare-commit-msg vs TortoiseGit Start-Commit)
+$commitMsgFile = ""
+$source = ""
+$workDir = ""
+
+# Heurística: se Git, $arg1 é MSG e $arg2 é source. Se TortoiseGit, $arg1 é PATH (tmp list), $arg2 é MSG.
+if ($arg2 -match "^(commit|merge|template|squash|message)$" -or $arg1 -match "COMMIT_EDITMSG") {
+    # Padrão Git CLI
+    $commitMsgFile = $arg1
+    $source = $arg2
+    $workDir = $arg3
+}
+else {
+    # Padrão TortoiseGit (Start-Commit append automatico: PATH MESSAGEFILE CWD)
+    $commitMsgFile = $arg2
+    $workDir = $arg3
+    $source = ""
+}
+
+# Carrega as funcoes
+. (Join-Path $BaseDir "lib\PathService.ps1")
+. (Join-Path $BaseDir "lib\ConfigService.ps1")
+. (Join-Path $BaseDir "lib\LogService.ps1")
+. (Join-Path $BaseDir "lib\GitService.ps1")
+. (Join-Path $BaseDir "lib\AIService.ps1")
+
+# LIMPA O LOG E INICIA A SESSAO
+$clearLog = Get-AppConfig "CLEAR_LOG"
+if ([string]::IsNullOrWhiteSpace($clearLog)) { $clearLog = "True" }
+
+if ($clearLog -eq "True") {
+    Write-Log "--- INICIO DA EXECUCAO ---" -Clear
+}
+else {
+    Write-Log "--- INICIO DA EXECUCAO ---" 
+}
+
+Write-Log "PARAM RAW: arg1=$arg1 | arg2=$arg2 | arg3=$arg3"
+Write-Log "INTERPRETADO: MsgFile=$commitMsgFile | Source=$source | WorkDir=$workDir"
+
+# Validacao de Variaveis do TortoiseGit (caso o usuario digite na mao)
+if ($commitMsgFile -match "%(MSGFILE|PATH|[1-4])%") {
+    Write-Log "ERRO DE CONFIGURACAO: Variavel literal detectada. Remova as aspas e os %VAR% do TortoiseGit. Deixe apenas o caminho do script."
+    exit 0
+}
+# MODO DE RECUPERACAO DO TORTOISEGIT
+# Se o TortoiseGit nao substituiu %MSGFILE%, tentamos encontrar o arquivo temporario mais recente do Tortoise
+if ($commitMsgFile -eq "%MSGFILE%" -or $commitMsgFile -eq "%4" -or [string]::IsNullOrWhiteSpace($commitMsgFile)) {
+    Write-Log "AVISO: TortoiseGit falhou ao passar %MSGFILE%. Tentando recuperacao automatica..."
+    $tempDir = [System.IO.Path]::GetTempPath()
+    # Os arquivos do TortoiseGit geralmente comecam com 'tmp' e sao criados segundos antes
+    $lastTmp = Get-ChildItem -Path $tempDir -Filter "*.tmp" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    
+    if ($lastTmp) {
+        $commitMsgFile = $lastTmp.FullName
+        Write-Log "RECURSO: Arquivo temporario provavel encontrado: $commitMsgFile"
+    }
+    else {
+        Write-Log "ERRO: Nao foi possivel localizar o arquivo de mensagem do TortoiseGit."
+        exit 0
+    }
+}
+
+# Limpeza de parametros
+$cleanMsgFile = $commitMsgFile.Trim('"')
+$cleanWorkDir = $workDir.Trim('"')
+if ($workDir -match '\"$') { $cleanWorkDir = $workDir -replace '\"$', '\' }
+
+# Tratamento do WorkDir (Se vier vazio ou %PATH%, usamos o diretorio do script como fallback)
+if ($cleanWorkDir -eq "%PATH%" -or $cleanWorkDir -eq "%3" -or [string]::IsNullOrWhiteSpace($cleanWorkDir)) {
+    if ($source -and (Test-Path $source)) { $cleanWorkDir = $source } else { $cleanWorkDir = $BaseDir }
+}
+
+try {
+    if (Test-Path $cleanWorkDir) { 
+        Set-Location $cleanWorkDir -ErrorAction SilentlyContinue 
+        Write-Log "INFO: Diretorio de trabalho: $cleanWorkDir"
+    }
+    else {
+        # Fallback seguro para o diretorio do script
+        Set-Location $BaseDir
+    }
+    
+    # 3. Busca Diff
+    Write-Log "INFO: Capturando Diff..."
+    $diffContent = Get-GitStagedDiff
+    
+    if ([string]::IsNullOrWhiteSpace($diffContent)) { 
+        Write-Log "FIM: Nenhum diff detectado para analise."
+        exit 0 
+    }
+    Write-Log "INFO: Diff capturado ($($diffContent.Length) caracteres)."
+
+    # 4. Busca Sugestao via IA
+    $aiProvider = Get-AppConfig "PROVIDER"
+    $promptFile = Get-AppConfig "PROMPT_FILE"
+    if ([string]::IsNullOrWhiteSpace($promptFile)) { $promptFile = "commit-msg.txt" }
+    
+    $branch = Get-GitBranch
+    Write-Log "INFO: Solicitando sugestao ao $aiProvider usando prompt $promptFile..."
+    
+    $promptPath = Join-Path $BaseDir "prompts\$promptFile"
+    if (!(Test-Path $promptPath)) {
+        Write-Log "AVISO: Prompt $promptFile nao encontrado. Usando padrao."
+        $promptPath = Join-Path $BaseDir "prompts\commit-msg.txt"
+    }
+    
+    $promptTemplate = Get-Content $promptPath -Raw
+    $fullPrompt = $promptTemplate.Replace("{{DIFF}}", $diffContent).Replace("{{BRANCH}}", $branch).Replace("{{AI_CLI}}", "$aiProvider-CLI")
+
+    $suggestion = Get-AISuggestion -prompt $fullPrompt -provider $aiProvider
+    
+    if (![string]::IsNullOrWhiteSpace($suggestion)) {
+        # O script agora capturou o STDOUT corretamente em UTF-8 devido ao bloqueio inicial.
+        # Salvaremos como UTF8 (com BOM no PS 5.1) para garantir que o TortoiseGit leia perfeitamente.
+        Set-Content -Path $cleanMsgFile -Value $suggestion -Encoding UTF8
+        Write-Log "SUCESSO: Mensagem preenchida no arquivo: $cleanMsgFile"
+    }
+    else {
+        Write-Log "AVISO: IA nao retornou texto."
+    }
+}
+catch {
+    Write-Log "ERRO CRITICO: $($_.Exception.Message)"
+}
+
+Write-Log "--- FIM DA EXECUCAO ---"
+exit 0
