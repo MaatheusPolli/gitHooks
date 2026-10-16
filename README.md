@@ -6,14 +6,19 @@ Este projeto é um ecossistema modular desenhado para automatizar e padronizar a
 
 ## 📂 Estrutura do Projeto (Arquitetura Modular)
 
+```text
 Z:/gitHooks/
-├── lib/                      # Core: Serviços de Git, IA, Configuração e Log (.ps1/.psm1)
-├── prompts/                  # Biblioteca: Templates de mensagens (Editáveis .txt)
-├── actions/                  # Orquestradores: Scripts de lógica de negócio (.ps1)
-├── hooks/                    # Pontos de Entrada: Scripts de integração com o Git
-├── setup/                    # Instalação: Scripts de configuração (Batch e PowerShell)
-├── diagnostics/              # Validação: Verificação de ambiente e conexão
-└── config/                   # Preferências: Motor de IA, Idioma e Logs (.txt)
+├── lib/            # Core: AIService, ConfigService, GitService, LogService, PathService (.ps1)
+│   └── providers/  # GeminiProvider, ClaudeProvider, CopilotProvider
+├── prompts/        # Templates editáveis: commit-msg.txt, commit-msg-senior.txt
+├── actions/        # Orquestradores: GenerateCommitMsg.ps1, PerformCodeReview.ps1 (em evolução)
+├── hooks/          # prepare-commit-msg (integração com o git commit)
+├── setup/          # Setup-TortoiseGit-IA.bat, Instalar-GeminiCLI.bat, Install-All.ps1
+├── diagnostics/    # Verify-Environment.ps1, Test-AllProviders.ps1, Diagnostico-Hooks-IA.bat
+└── config/         # settings.txt (provedor, idioma, Smart Diff, logs)
+```
+
+> Hoje os scripts esperam o projeto em `Z:\gitHooks` (unidade mapeada).
 
 ---
 
@@ -64,7 +69,8 @@ Edite `Z:\gitHooks\config\settings.txt` para ajustar o comportamento:
 - **LANGUAGE:** `PT-BR`.
 - **MAX_DIFF_CHARS:** Limite total de caracteres enviados para a IA (Padrão: 80.000). Evita lentidão em commits gigantes.
 - **IGNORED_EXTENSIONS:** Lista de extensões que a IA deve ignorar no diff detalhado (ex: `.map, .bin`).
-- **INCLUDE_UNTRACKED/INCLUDE_UNSTAGED:** Define se a IA deve "olhar" para arquivos que você ainda não deu `git add`. (Recomendado: FALSE).
+- **INCLUDE_UNTRACKED/INCLUDE_UNSTAGED:** Define se a IA deve "olhar" para arquivos que você ainda não deu `git add`. **Recomendado: FALSE.** No `settings.txt` atual os dois estão `TRUE`; volte para `FALSE` para não enviar arquivos não versionados (ex.: `.env`) à IA.
+- **PRIORITY_EXTENSIONS / DIFF_CONTEXT_LINES / CLEAR_LOG:** Extensões com mais espaço no diff, linhas de contexto (padrão 1) e limpeza do log a cada execução.
 - **LOG_PATH:** Local do log (Default: `C:\LOG-GitHooks\debug.log`).
 
 ---
@@ -78,14 +84,14 @@ Para garantir que a IA seja rápida e precisa, o sistema utiliza uma técnica de
 4.  **Prioridade por Extensão:** Arquivos críticos como `.pas`, `.js` e `.xml` têm prioridade de espaço, enquanto arquivos de configuração são resumidos primeiro.
 5.  **Truncamento Estratégico:** Arquivos excessivamente grandes são resumidos para que a IA foque apenas nos blocos de mudança essenciais.
 
-## 🛠️ 3. Configuração Passo a Passo no TortoiseGit
+## 🛠️ 4. Configuração Passo a Passo no TortoiseGit
 
-Para que a IA preencha automaticamente sua mensagem de commit na interface visual, siga exatamente estas etapas (veja imagem `Configuração Tortoise.jpg` na raiz para referência visual):
+Para que a IA preencha automaticamente sua mensagem de commit na interface visual, siga exatamente estas etapas:
 
 1.  **Acesse as Configurações**: Clique com o botão direito em qualquer pasta do seu repositório -> **TortoiseGit** -> **Settings**.
 2.  **Selecione Hook Scripts**: No menu à esquerda, navegue até a seção **Hook Scripts**.
 3.  **Adicione um Novo Hook**: Clique no botão **Add...** à direita.
-4.  **Configure conforme a imagem `Configuração Tortoise.jpg`**:
+4.  **Configure assim**:
     - **Hook Type**: Selecione `Start Commit Hook`.
     - **Run when working tree path is under**: Coloque um asterisco `*` (ou o caminho do seu projeto).
     - **Command Line To Execute**: 
@@ -98,7 +104,7 @@ Para que a IA preencha automaticamente sua mensagem de commit na interface visua
 
 ---
 
-## 🎨 4. Customização de Prompts
+## 🎨 5. Customização de Prompts
 
 Você pode criar seus próprios templates na pasta `prompts/`. O sistema substitui automaticamente:
 - `{{DIFF}}`: O código alterado.
@@ -112,3 +118,12 @@ Você pode criar seus próprios templates na pasta `prompts/`. O sistema substit
 - **A mensagem não aparece:** Use o script `Z:\gitHooks\diagnostics\Verify-Environment.ps1` para validar a conexão.
 - **Erro de Quota:** O Gemini possui limites. Se falhar, o log registrará "Erro de Quota" e você poderá preencher manualmente.
 - **Verificar Logs:** Consulte o log em `C:\LOG-GitHooks\debug.log` para ver o rastro técnico da execução.
+
+## Licença
+
+Este projeto usa **licença dupla**. O texto completo está em [LICENSE](LICENSE).
+
+- **Uso pessoal, educacional e não comercial:** livre, nos termos da licença MIT (mantenha o aviso de copyright).
+- **Uso comercial:** exige licença comercial. Isso inclui usar em produto ou serviço comercial, vender acesso ou derivados, usar em atividades com fins lucrativos e implantar em empresas.
+
+Contato para licença comercial: ma.polli@hotmail.com
