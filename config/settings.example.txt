@@ -1,0 +1,56 @@
+# ======================================================
+# CONFIGURAÇÕES GERAIS - GIT AI HOOKS
+# ======================================================
+
+# Define o provedor de Inteligência Artificial para geração das mensagens.
+# Opções disponíveis: Gemini, Claude, Copilot.
+PROVIDER=Gemini
+
+# Define o idioma oficial no qual a IA escreverá as mensagens de commit.
+# Exemplo: PT-BR, EN.
+LANGUAGE=PT-BR
+
+# Define o arquivo de template (prompt) que servirá de instrução para a IA.
+# Opções: 
+# - commit-msg.txt (Padrão: Direto e objetivo)
+# - commit-msg-senior.txt (Avançado: Focado em arquitetuta e impacto técnico)
+PROMPT_FILE=commit-msg.txt
+
+# --- ESCOPO DE ANÁLISE TÉCNICA ---
+
+# Incluir arquivos novos (Untracked) que ainda NÃO foram versionados pelo Git?
+# Se FALSE (Recomendado), a IA analisará apenas o que já está marcado para commit.
+INCLUDE_UNTRACKED=FALSE
+
+# Se FALSE (Recomendado), a IA focará estritamente no diff preparado para o commit atual.
+INCLUDE_UNSTAGED=FALSE
+
+# --- OTIMIZAÇÃO DE PERFORMANCE (SMART DIFF) ---
+
+# Limite máximo de caracteres do Diff total (Evita lentidão em commits gigantes).
+MAX_DIFF_CHARS=80000
+
+# Extensões IGNORADAS no corpo do diff (ex: arquivos gerados ou binários).
+IGNORED_EXTENSIONS=.map,.min.js,.log,.tmp,.bin,.exe,.dll,.jpg,.png
+
+# Extensões PRIORITÁRIAS (Terão mais espaço e menos truncamento no diff).
+# Ex: .pas, .js, .xml, .ps1
+PRIORITY_EXTENSIONS=.pas,.js,.xml,.ps1
+
+# Quantidade de linhas de contexto ao redor de cada mudança no diff.
+# 0 = Apenas as linhas que mudaram (Mínimo de caracteres).
+# 1-3 = Recomendado para manter um pouco de contexto técnico.
+DIFF_CONTEXT_LINES=1
+
+# --- RASTREABILIDADE (LOGS) ---
+
+# Controla se o log deve ser limpo a cada nova execução do assistente.
+# Opções: True (Limpa a cada uso), False (Acumula histórico).
+CLEAR_LOG=True
+
+# Define o caminho absoluto onde o histórico técnico de execução será gravado.
+# Verifique se o terminal tem permissão de escrita nesta pasta.
+LOG_PATH=C:og-githooksdebug.log
+
+# Revisao automatica pre-push (envia o diff a IA externa; padrao desativado)
+CODE_REVIEW_ENABLED=FALSE

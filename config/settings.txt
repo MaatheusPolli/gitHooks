@@ -20,10 +20,10 @@ PROMPT_FILE=commit-msg.txt
 
 # Incluir arquivos novos (Untracked) que ainda NÃO foram versionados pelo Git?
 # Se FALSE (Recomendado), a IA analisará apenas o que já está marcado para commit.
-INCLUDE_UNTRACKED=TRUE
+INCLUDE_UNTRACKED=FALSE
 
 # Se FALSE (Recomendado), a IA focará estritamente no diff preparado para o commit atual.
-INCLUDE_UNSTAGED=TRUE
+INCLUDE_UNSTAGED=FALSE
 
 # --- OTIMIZAÇÃO DE PERFORMANCE (SMART DIFF) ---
 
@@ -51,3 +51,6 @@ CLEAR_LOG=True
 # Define o caminho absoluto onde o histórico técnico de execução será gravado.
 # Verifique se o terminal tem permissão de escrita nesta pasta.
 LOG_PATH=C:\LOG-GitHooks\debug.log
+
+# Revisao automatica pre-push (envia o diff a IA externa; padrao desativado)
+CODE_REVIEW_ENABLED=FALSE

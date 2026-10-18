@@ -2,10 +2,9 @@
 
 # 1. Descobre a raiz do projeto (Hub de Hooks) baseado na pasta diagnostics/
 $BaseDir = Split-Path -Parent $PSScriptRoot
-$AiServicePath = Join-Path $BaseDir "lib\AIService.psm1"
 
-# 2. Importa o Core dinamicamente
-Import-Module $AiServicePath -Force
+# 2. Importa o Core dinamicamente (AIService é um .ps1 com dot-source dos provedores)
+. (Join-Path $BaseDir "lib\AIService.ps1")
 
 $providers = @("Gemini", "Claude", "Copilot")
 $testPrompt = "Diga apenas a palavra 'OK' se você estiver funcionando."

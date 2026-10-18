@@ -1,10 +1,12 @@
 # 🔍 Diagnóstico de Ambiente - Git AI Hooks
-$BaseDir = "Z:\gitHooks"
+# A raiz do hub e descoberta a partir da pasta diagnostics/ (funciona em qualquer drive)
+$BaseDir = Split-Path -Parent $PSScriptRoot
 . (Join-Path $BaseDir "lib\PathService.ps1")
 . (Join-Path $BaseDir "lib\ConfigService.ps1")
 . (Join-Path $BaseDir "lib\AIService.ps1")
 
 Write-Host "--- Iniciando Validação Técnica ---" -ForegroundColor Cyan
+Write-Host "Raiz do hub: $BaseDir" -ForegroundColor Gray
 
 # 1. Teste de Configuração
 $provider = Get-AppConfig "PROVIDER"
@@ -33,6 +35,8 @@ $files = @(
     "prompts\commit-msg.txt",
     "prompts\commit-msg-senior.txt",
     "lib\GitService.ps1",
+    "lib\SecretFilter.ps1",
+    "lib\CommitFormat.ps1",
     "config\settings.txt"
 )
 

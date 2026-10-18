@@ -40,6 +40,8 @@ else {
 . (Join-Path $BaseDir "lib\LogService.ps1")
 . (Join-Path $BaseDir "lib\GitService.ps1")
 . (Join-Path $BaseDir "lib\AIService.ps1")
+. (Join-Path $BaseDir "lib\SecretFilter.ps1")
+. (Join-Path $BaseDir "lib\CommitFormat.ps1")
 
 # LIMPA O LOG E INICIA A SESSAO
 $clearLog = Get-AppConfig "CLEAR_LOG"
@@ -128,6 +130,14 @@ try {
     $suggestion = Get-AISuggestion -prompt $fullPrompt -provider $aiProvider
     
     if (![string]::IsNullOrWhiteSpace($suggestion)) {
+        # Fora do Conventional Commits: apenas registra; o texto bruto e mantido (fallback)
+        if (Test-ConventionalCommit $suggestion) {
+            Write-Log "INFO: Mensagem no formato Conventional Commits."
+        }
+        else {
+            Write-Log "AVISO: Mensagem fora do formato Conventional Commits. Usando texto bruto."
+        }
+
         # O script agora capturou o STDOUT corretamente em UTF-8 devido ao bloqueio inicial.
         # Salvaremos como UTF8 (com BOM no PS 5.1) para garantir que o TortoiseGit leia perfeitamente.
         Set-Content -Path $cleanMsgFile -Value $suggestion -Encoding UTF8

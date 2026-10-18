@@ -1,0 +1,7 @@
+#!/bin/sh
+# Hook modular: revisao automatica antes do push (non-blocking)
+# GITHOOKS_HOME tem prioridade; o caminho padrao e gravado pelo instalador (setup/Install-All.ps1)
+HUB="${GITHOOKS_HOME:-__GITHOOKS_HOME__}"
+REVIEW_SCRIPT="$HUB/actions/PerformCodeReview.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$REVIEW_SCRIPT"
+exit 0
