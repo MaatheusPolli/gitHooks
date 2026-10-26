@@ -65,3 +65,13 @@ Describe "Get-GitStagedDiff (Smart Diff)" {
         $script:Diff | Should -Not -Match "untracked.txt"
     }
 }
+
+Describe "Test-IgnoredFile" {
+    It "casa extensao composta como .min.js (Get-Extension nao casaria)" {
+        Test-IgnoredFile "web/app.min.js" @(".min.js", ".map") | Should -BeTrue
+    }
+
+    It "nao ignora arquivo comum com mesma base" {
+        Test-IgnoredFile "web/app.js" @(".min.js", ".map") | Should -BeFalse
+    }
+}

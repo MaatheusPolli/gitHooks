@@ -1,4 +1,15 @@
-﻿function Get-GitStagedDiff {
+﻿# Compara o nome do arquivo com a lista de extensoes (ex.: ".js" ou ".min.js").
+# Get-Extension devolveria ".js" e nunca casaria ".min.js"
+function Test-IgnoredFile {
+    param([string]$File, [string[]]$Patterns)
+    $lower = $File.ToLower()
+    foreach ($p in $Patterns) {
+        if ($p -and $lower.EndsWith($p)) { return $true }
+    }
+    return $false
+}
+
+function Get-GitStagedDiff {
     # 1. Carrega as flags de configuracao
     $includeUntracked = Get-AppConfig "INCLUDE_UNTRACKED"
     $includeUnstaged = Get-AppConfig "INCLUDE_UNSTAGED"
@@ -15,9 +26,10 @@
     $fileSummary = "### SUMÁRIO DE ARQUIVOS ALTERADOS:`n"
 
     # 2. Captura lista de arquivos (Staged, Unstaged, Untracked)
-    $stagedAll = @(git diff --cached --name-only)
-    $unstagedAll = if ($includeUnstaged -ieq "True") { @(git diff --name-only) } else { @() }
-    $untrackedAll = if ($includeUntracked -ieq "True") { @(git ls-files --others --exclude-standard) } else { @() }
+    # core.quotepath=off: nomes com acento saem literais, nao entre aspas com escapes octais
+    $stagedAll = @(git -c core.quotepath=off diff --cached --name-only)
+    $unstagedAll = if ($includeUnstaged -ieq "True") { @(git -c core.quotepath=off diff --name-only) } else { @() }
+    $untrackedAll = if ($includeUntracked -ieq "True") { @(git -c core.quotepath=off ls-files --others --exclude-standard) } else { @() }
 
     # 2.1 Arquivos sensiveis (.env, chaves, appsettings) nunca vao para a IA: so o nome aparece no sumario
     $skipped = @()
@@ -41,7 +53,7 @@
     foreach ($file in $allFiles) {
         # Pula se for extensão ignorada
         $ext = [System.IO.Path]::GetExtension($file).ToLower()
-        if ($ignoredExts -contains $ext) {
+        if (Test-IgnoredFile $file $ignoredExts) {
             $finalDiff += "`n[INFO] Arquivo $file ignorado (extensão na whitelist de bloqueio).`n"
             continue
         }
@@ -76,7 +88,7 @@
             if ($finalDiff.Length -gt $maxTotalChars) { break }
 
             $ext = [System.IO.Path]::GetExtension($file).ToLower()
-            if ($ignoredExts -contains $ext) { continue }
+            if (Test-IgnoredFile $file $ignoredExts) { continue }
 
             $fileDiff = git diff "-U$contextLines" -w --no-color --no-ext-diff -- "$file"
             $fileDiff = Remove-SecretsFromText ($fileDiff -join "`n")
@@ -113,23 +125,24 @@ function Get-GitDefaultBase {
 }
 
 function Get-GitReviewDiff {
-    # Diff de tudo que esta no HEAD e ainda nao esta na base (merge-base), para revisao pre-push
+    # Diff de tudo que esta em Head e ainda nao esta na base (merge-base), para revisao pre-push
     param(
         [Parameter(Mandatory = $true)][string]$Base,
+        [string]$Head = "HEAD",
         [int]$MaxChars = 80000
     )
 
     $contextLines = Get-AppConfig "DIFF_CONTEXT_LINES"
     if ([string]::IsNullOrWhiteSpace($contextLines)) { $contextLines = "1" }
 
-    $mergeBase = git merge-base $Base HEAD 2>$null
+    $mergeBase = git merge-base $Base $Head 2>$null
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($mergeBase)) { return $null }
 
     # Arquivos sensiveis ficam de fora do pathspec, nunca chegam a ser lidos para o prompt
-    $files = @(git diff --name-only $mergeBase HEAD | Where-Object { -not (Test-SensitiveFile $_) })
+    $files = @(git -c core.quotepath=off diff --name-only $mergeBase $Head | Where-Object { -not (Test-SensitiveFile $_) })
     if ($files.Count -eq 0) { return "" }
 
-    $diff = (git diff "-U$contextLines" -w --no-color --no-ext-diff $mergeBase HEAD -- @files) -join "`n"
+    $diff = (git diff "-U$contextLines" -w --no-color --no-ext-diff $mergeBase $Head -- @files) -join "`n"
     $diff = Remove-SecretsFromText $diff
 
     if ($diff.Length -gt $MaxChars) {

@@ -5,9 +5,7 @@ Analise exclusivamente o diff fornecido e gere a MENSAGEM de commit.
 
 Formato OBRIGATÓRIO da resposta (não altere a estrutura):
 
-[{{BRANCH}}]
-
-[{{TYPE}}] - {{TITLE}}
+<tipo>(<escopo opcional>): <título curto no imperativo>
 
 Ações e melhorias realizadas:
 - [Ponto objetivo 1]

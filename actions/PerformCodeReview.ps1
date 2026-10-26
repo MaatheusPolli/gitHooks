@@ -1,8 +1,9 @@
 ﻿# Revisao automatica de codigo antes do push (non-blocking: sempre exit 0)
-# Uso: .\PerformCodeReview.ps1 [-Base origin/main]
+# Uso: .\PerformCodeReview.ps1 [-Base origin/main] [-Head HEAD]
 # Ativacao: CODE_REVIEW_ENABLED=TRUE em config/settings.txt (padrao FALSE, pois envia o diff a IA externa)
 param(
-    [string]$Base = ""
+    [string]$Base = "",
+    [string]$Head = "HEAD"
 )
 
 $BaseDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Definition)
@@ -36,7 +37,7 @@ try {
     $maxChars = [int](Get-AppConfig "MAX_DIFF_CHARS")
     if ($maxChars -le 0) { $maxChars = 80000 }
 
-    $diff = Get-GitReviewDiff -Base $Base -MaxChars $maxChars
+    $diff = Get-GitReviewDiff -Base $Base -Head $Head -MaxChars $maxChars
     if ($null -eq $diff) {
         Write-Host "Revisão ignorada: não foi possível calcular o merge-base com $Base." -ForegroundColor Yellow
         exit 0
@@ -51,7 +52,8 @@ try {
     $branch = Get-GitBranch
     $promptPath = Join-Path $BaseDir "prompts\code-review.txt"
     $template = Get-Content $promptPath -Raw -Encoding UTF8
-    $fullPrompt = $template.Replace("{{DIFF}}", $diff).Replace("{{BRANCH}}", $branch).Replace("{{AI_CLI}}", "$aiProvider-CLI")
+    # O diff entra por ultimo: se ele contiver "{{BRANCH}}" ou "{{AI_CLI}}", nao sera trocado
+    $fullPrompt = $template.Replace("{{BRANCH}}", $branch).Replace("{{AI_CLI}}", "$aiProvider-CLI").Replace("{{DIFF}}", $diff)
 
     Write-Host "--- Revisão automática de código ($aiProvider, base: $Base) ---" -ForegroundColor Cyan
     $review = Get-AISuggestion -prompt $fullPrompt -provider $aiProvider

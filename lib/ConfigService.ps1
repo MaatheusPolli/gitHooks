@@ -19,7 +19,8 @@ function Get-AppConfig {
     try {
         $lines = Get-Content $configPath -ErrorAction SilentlyContinue | Where-Object { $_.Trim() -and !$_.StartsWith("#") }
         foreach ($line in $lines) {
-            $parts = $line -split "="
+            # Limite 2: valores com "=" (ex.: connection strings) ficam inteiros
+            $parts = $line -split "=", 2
             if ($parts.Length -eq 2 -and $parts[0].Trim() -eq $key) {
                 return $parts[1].Trim()
             }

@@ -7,7 +7,7 @@ echo ======================================================
 echo.
 
 :: Executa o PowerShell usando o caminho relativo ao .bat
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Invoke-Expression (Get-Content '%SCRIPT_DIR%Test-AllProviders.ps1' -Raw)"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%Test-AllProviders.ps1"
 
 echo.
 echo ======================================================

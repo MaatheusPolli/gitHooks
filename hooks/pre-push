@@ -3,5 +3,19 @@
 # GITHOOKS_HOME tem prioridade; o caminho padrao e gravado pelo instalador (setup/Install-All.ps1)
 HUB="${GITHOOKS_HOME:-__GITHOOKS_HOME__}"
 REVIEW_SCRIPT="$HUB/actions/PerformCodeReview.ps1"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$REVIEW_SCRIPT"
+
+# O git envia uma linha por ref: <ref local> <sha local> <ref remoto> <sha remoto>.
+# Revisa o que esta sendo publicado (e nao o HEAD). Uma revisao por push: a primeira ref
+while read -r local_ref local_sha remote_ref remote_sha; do
+    case "$local_sha" in
+        *[!0]*) ;;
+        *) continue ;;   # exclusao de ref remota: nada para revisar
+    esac
+    case "$remote_sha" in
+        *[!0]*) BASE_SHA="$remote_sha" ;;   # branch ja existe no remoto: compara com ela
+        *) BASE_SHA="" ;;                   # branch nova: o script usa a base padrao
+    esac
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$REVIEW_SCRIPT" -Head "$local_sha" -Base "$BASE_SHA"
+    break
+done
 exit 0

@@ -16,17 +16,10 @@ BeforeAll {
     Set-Content -Path (Join-Path $script:ShimDir "claude.cmd") -Value $shimLines -Encoding ASCII
     $script:OldPath = $env:PATH
     $env:PATH = "$script:ShimDir;$env:PATH"
-
-    # Stub de gh: funcoes tem prioridade sobre executaveis, entao os testes rodam sem gh instalado
-    function global:gh {
-        $global:LASTEXITCODE = 0
-        "Resposta do stub gh"
-    }
 }
 
 AfterAll {
     $env:PATH = $script:OldPath
-    Remove-Item Function:\gh -ErrorAction SilentlyContinue
     Remove-Item Env:STUB_CLAUDE_FAIL -ErrorAction SilentlyContinue
     Remove-Item -Recurse -Force $script:ShimDir -ErrorAction SilentlyContinue
 }
@@ -62,8 +55,8 @@ Describe "Invoke-Claude" {
 }
 
 Describe "Invoke-Copilot" {
-    It "devolve a saida do gh" {
-        Invoke-Copilot "teste" | Should -Be "Resposta do stub gh"
+    It "e desativado com mensagem clara (nao chama o gh interativo)" {
+        { Invoke-Copilot "teste" } | Should -Throw "*nao suportado*"
     }
 }
 
@@ -74,8 +67,8 @@ Describe "Get-AISuggestion (roteamento)" {
         Get-AISuggestion -prompt "oi" -provider "Claude" | Should -Be "Resposta do stub claude"
     }
 
-    It "roteia Copilot para o provedor Copilot" {
-        Get-AISuggestion -prompt "oi" -provider "Copilot" | Should -Be "Resposta do stub gh"
+    It "roteia Copilot para o provedor Copilot (desativado)" {
+        { Get-AISuggestion -prompt "oi" -provider "Copilot" } | Should -Throw "*nao suportado*"
     }
 
     It "provedor desconhecido gera erro claro" {

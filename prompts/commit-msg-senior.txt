@@ -22,7 +22,7 @@ Formato OBRIGATÓRIO:
 Gerado por: [{{AI_CLI}} - Modo Sênior]
 
 Regras de Ouro:
-- Tipos aceitos: feat, fix, refactor, performance, docs, test, chore, style.
+- Tipos aceitos: feat, fix, refactor, perf, docs, test, chore, style.
 - Linguagem: Português (PT-BR).
 - Seja extremamente técnico. Use termos como "cláusula try/finally", "singleton", "memory leak", "endpoint", etc., quando aplicável.
 - Não invente informações. Se o diff for pequeno, seja direto.

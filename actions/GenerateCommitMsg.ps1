@@ -141,7 +141,8 @@ try {
     }
     
     $promptTemplate = Get-Content $promptPath -Raw -Encoding UTF8
-    $fullPrompt = $promptTemplate.Replace("{{DIFF}}", $diffContent).Replace("{{BRANCH}}", $branch).Replace("{{AI_CLI}}", "$aiProvider-CLI")
+    # O diff entra por ultimo: se ele contiver "{{BRANCH}}" ou "{{AI_CLI}}", nao sera trocado
+    $fullPrompt = $promptTemplate.Replace("{{BRANCH}}", $branch).Replace("{{AI_CLI}}", "$aiProvider-CLI").Replace("{{DIFF}}", $diffContent)
 
     $suggestion = Get-AISuggestion -prompt $fullPrompt -provider $aiProvider
     
