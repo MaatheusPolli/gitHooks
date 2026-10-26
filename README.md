@@ -7,7 +7,7 @@ Este projeto é um ecossistema modular desenhado para automatizar e padronizar a
 ## 📂 Estrutura do Projeto (Arquitetura Modular)
 
 ```text
-Z:/gitHooks/
+<pasta-do-projeto>/gitHooks/
 ├── lib/            # Core: AIService, ConfigService, GitService, LogService, PathService (.ps1)
 │   └── providers/  # GeminiProvider, ClaudeProvider, CopilotProvider
 ├── prompts/        # Templates editáveis: commit-msg.txt, commit-msg-senior.txt
@@ -18,7 +18,7 @@ Z:/gitHooks/
 └── config/         # settings.txt (provedor, idioma, Smart Diff, logs)
 ```
 
-> Hoje os scripts esperam o projeto em `Z:\gitHooks` (unidade mapeada).
+> Os scripts resolvem a pasta pela própria localização; se preferir, defina a variável de ambiente `GITHOOKS_HOME` com o caminho do projeto.
 
 ---
 
@@ -35,7 +35,7 @@ A automação foi construída para ser um **assistente invisível**. Se algo fal
 
 1.  **PowerShell 5.1+:** Linguagem principal do projeto para integração nativa com o Windows. (Arquivos `.ps1` e `.psm1`).
 2.  **Node.js (LTS):** Necessário para rodar os CLIs de IA (Gemini-CLI).
-3.  **Unidade Z:\:** O projeto deve estar acessível via unidade mapeada Z:.
+3.  **Local do projeto:** Não é necessário unidade Z:. Basta a pasta do projeto (opcionalmente, defina `GITHOOKS_HOME`).
 4.  **API Key:** Uma chave ativa do Google AI Studio (Gratuita).
 
 ---
@@ -46,21 +46,21 @@ Para facilitar a adoção pelo time, criamos dois níveis de instalação:
 
 ### A. Setup Rápido (Apenas TortoiseGit)
 Se você usa apenas a interface visual do TortoiseGit, execute:
-`Z:\gitHooks\setup\Setup-TortoiseGit-IA.bat`
+`<pasta-do-projeto>\gitHooks\setup\Setup-TortoiseGit-IA.bat`
 - Ele instala o Node.js e o Gemini-CLI.
 - Orienta sobre o login na IA.
 - Mostra como configurar o Hook na tela do TortoiseGit.
 
 ### B. Setup Completo (Tortoise + Terminal + CI/CD)
 Se você quer que a IA funcione também ao digitar `git commit` no terminal, execute:
-`powershell -File "Z:\gitHooks\setup\Install-All.ps1"`
+`powershell -File "<pasta-do-projeto>\gitHooks\setup\Install-All.ps1"`
 - Realiza todo o setup básico e instala o hook nativo `prepare-commit-msg` no seu repositório local.
 
 ---
 
 ## ⚙️ 2. Configurações (settings.txt)
 
-Edite `Z:\gitHooks\config\settings.txt` para ajustar o comportamento:
+Edite `<pasta-do-projeto>\gitHooks\config\settings.txt` para ajustar o comportamento:
 
 - **PROVIDER:** `Gemini` (Padrão), `Claude` ou `Copilot`.
 - **PROMPT_FILE:** 
@@ -95,7 +95,7 @@ Para que a IA preencha automaticamente sua mensagem de commit na interface visua
     - **Hook Type**: Selecione `Start Commit Hook`.
     - **Run when working tree path is under**: Coloque um asterisco `*` (ou o caminho do seu projeto).
     - **Command Line To Execute**: 
-      `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Z:\gitHooks\actions\GenerateCommitMsg.ps1"`
+      `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "<pasta-do-projeto>\gitHooks\actions\GenerateCommitMsg.ps1"`
     - **Wait for the script to finish**: **MARCADA** (Obrigatório).
     - **Hide the script while running**: **MARCADA** (Recomendado).
 5.  **Salve**: Clique em **OK** e pronto!
@@ -115,7 +115,7 @@ Você pode criar seus próprios templates na pasta `prompts/`. O sistema substit
 
 ## 🔍 Resolução de Problemas (Troubleshooting)
 
-- **A mensagem não aparece:** Use o script `Z:\gitHooks\diagnostics\Verify-Environment.ps1` para validar a conexão.
+- **A mensagem não aparece:** Use o script `<pasta-do-projeto>\gitHooks\diagnostics\Verify-Environment.ps1` para validar a conexão.
 - **Erro de Quota:** O Gemini possui limites. Se falhar, o log registrará "Erro de Quota" e você poderá preencher manualmente.
 - **Verificar Logs:** Consulte o log em `C:\LOG-GitHooks\debug.log` para ver o rastro técnico da execução.
 

@@ -50,7 +50,7 @@ CLEAR_LOG=True
 
 # Define o caminho absoluto onde o histórico técnico de execução será gravado.
 # Verifique se o terminal tem permissão de escrita nesta pasta.
-LOG_PATH=C:og-githooksdebug.log
+LOG_PATH=C:\LOG-GitHooks\debug.log
 
 # Revisao automatica pre-push (envia o diff a IA externa; padrao desativado)
 CODE_REVIEW_ENABLED=FALSE
