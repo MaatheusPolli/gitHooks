@@ -1,35 +1,41 @@
 # 🤖 Git AI Hooks - Setup Completo (instalar / desinstalar, idempotente)
-# Uso: .\Install-All.ps1            -> instala (prepare-commit-msg e pre-push)
-#      .\Install-All.ps1 -Uninstall -> remove os hooks deste repositorio
-param([switch]$Uninstall)
+# Uso: .\Install-All.ps1                          -> instala no repositorio da pasta atual
+#      .\Install-All.ps1 -RepoPath <pasta>        -> instala no repositorio informado
+#      .\Install-All.ps1 [-RepoPath <pasta>] -Uninstall -> remove os hooks deste projeto
+param([switch]$Uninstall, [string]$RepoPath)
 
 # Determina o BaseDir dinamicamente (Diretorio pai do script de setup)
 $BaseDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Definition)
-Set-Location $BaseDir
+# Pasta de onde o usuario chamou o script: e o repositorio alvo (nao o hub)
+$callerDir = (Get-Location).ProviderPath
 
 # Marca usada para reconhecer um hook instalado por este projeto
 $HookMarker = "Hook modular"
 $Hooks = @("prepare-commit-msg", "pre-push")
 
-# Repositorio alvo: o atual ou um informado pelo usuario
-$repoRoot = git rev-parse --show-toplevel 2>$null
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Repositório Git não detectado no diretório atual." -ForegroundColor Gray
-    $repoPath = Read-Host "Insira o caminho completo do repositório Git onde deseja instalar o Hook"
+# Repositorio alvo: -RepoPath, ou o repositorio da pasta de onde o script foi chamado
+if ([string]::IsNullOrWhiteSpace($RepoPath)) { $RepoPath = $callerDir }
+$repoRoot = git -C $RepoPath rev-parse --show-toplevel 2>$null
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($repoRoot)) {
+    Write-Host "Repositório Git não detectado em: $RepoPath" -ForegroundColor Gray
+    $RepoPath = Read-Host "Insira o caminho completo do repositório Git onde deseja instalar o Hook"
+    $repoRoot = git -C $RepoPath rev-parse --show-toplevel 2>$null
 }
-else {
-    $repoPath = $repoRoot
-}
-
-if (!(Test-Path "$repoPath\.git")) {
-    Write-Error "Caminho inválido ou não é um repositório Git: $repoPath"
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($repoRoot)) {
+    Write-Error "Caminho inválido ou não é um repositório Git: $RepoPath"
     exit 1
 }
+$repoPath = $repoRoot
+
+# Pasta de hooks efetiva: respeita core.hooksPath e worktrees (nao assume .git\hooks)
+$hooksPath = git -C $repoPath rev-parse --git-path hooks
+if ([System.IO.Path]::IsPathRooted($hooksPath)) { $hooksDir = $hooksPath }
+else { $hooksDir = [System.IO.Path]::GetFullPath((Join-Path $repoPath $hooksPath)) }
 
 # ----- Desinstalacao -----
 if ($Uninstall) {
     foreach ($hook in $Hooks) {
-        $hookDest = Join-Path $repoPath ".git\hooks\$hook"
+        $hookDest = Join-Path $hooksDir $hook
         if (!(Test-Path $hookDest)) { continue }
         if (-not (Select-String -Path $hookDest -Pattern $HookMarker -Quiet)) {
             Write-Warning "Hook $hook não foi instalado por este projeto. Não será removido."
@@ -82,15 +88,17 @@ Write-Host "[4/4] Instalando Git Hooks (prepare-commit-msg e pre-push)..." -Fore
 
 # Confere antes de gravar qualquer um, para nao instalar pela metade
 foreach ($hook in $Hooks) {
-    $hookDest = Join-Path $repoPath ".git\hooks\$hook"
+    $hookDest = Join-Path $hooksDir $hook
     if ((Test-Path $hookDest) -and -not (Select-String -Path $hookDest -Pattern $HookMarker -Quiet)) {
         Write-Error "Já existe um hook $hook que não é deste projeto: $hookDest. Remova-o manualmente."
         exit 1
     }
 }
 
+if (!(Test-Path $hooksDir)) { New-Item -ItemType Directory -Force -Path $hooksDir | Out-Null }
+
 foreach ($hook in $Hooks) {
-    $hookDest = Join-Path $repoPath ".git\hooks\$hook"
+    $hookDest = Join-Path $hooksDir $hook
     # O caminho do hub e gravado no hook (o hook copiado perde a referencia a sua pasta de origem)
     $hookContent = [System.IO.File]::ReadAllText((Join-Path $BaseDir "hooks\$hook"))
     $hookContent = $hookContent.Replace("__GITHOOKS_HOME__", ($BaseDir -replace '\\', '/'))

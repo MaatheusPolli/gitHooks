@@ -8,19 +8,40 @@ $script:SensitiveFilePatterns = @(
     '*.pfx',
     '*.p12',
     '*.key',
+    '*.ppk',
+    '*.jks',
+    '*.keystore',
+    '*.kdb',
+    '*.kdbx',
+    '*.tfvars',
     'appsettings*.json',
     'id_rsa*',
-    '*.kdb',
-    '*.kdbx'
+    'id_ecdsa*',
+    'id_ed25519*',
+    'credentials.json',
+    'secrets.json',
+    '.npmrc',
+    '.git-credentials',
+    'web.config'
 )
 
-# Padroes de chaves/credenciais mascarados dentro do texto do diff
+# Palavras-chave de credencial (sem "key" solto: casaria com codigo Pascal, ex.: "Key := 1")
+$script:SecretKeyWords = 'password|passwd|pwd|senha|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret|connection[_-]?string'
+
+# Padroes de chaves/credenciais mascarados dentro do texto do diff.
+# O grupo 1 (quando existir) e mantido e so o valor e trocado.
 $script:SecretPatterns = @(
-    @{ Name = 'GoogleApiKey'; Regex = 'AIza[0-9A-Za-z\-_]{35}' },
-    @{ Name = 'OpenAIKey';    Regex = 'sk-[A-Za-z0-9_\-]{20,}' },
-    @{ Name = 'GitHubToken';  Regex = 'gh[pousr]_[A-Za-z0-9]{36,}' },
-    @{ Name = 'AWSAccessKey'; Regex = 'AKIA[0-9A-Z]{16}' },
-    @{ Name = 'Assignment';   Regex = '(?i)((?:password|passwd|pwd|senha|secret|token|api[_-]?key)\s*[=:]\s*)(?:"[^"]*"|''[^'']*''|[^\s"'']+)' }
+    @{ Name = 'PrivateKeyPem'; Regex = '-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----'; Keep = $false },
+    @{ Name = 'GoogleApiKey';  Regex = 'AIza[0-9A-Za-z\-_]{35}'; Keep = $false },
+    @{ Name = 'OpenAIKey';     Regex = 'sk-[A-Za-z0-9_\-]{20,}'; Keep = $false },
+    @{ Name = 'GitHubToken';   Regex = 'gh[pousr]_[A-Za-z0-9]{36,}'; Keep = $false },
+    @{ Name = 'GitHubPat';     Regex = 'github_pat_[A-Za-z0-9_]{22,}'; Keep = $false },
+    @{ Name = 'SlackToken';    Regex = 'xox[abprs]-[A-Za-z0-9\-]{10,}'; Keep = $false },
+    @{ Name = 'AWSAccessKey';  Regex = 'AKIA[0-9A-Z]{16}'; Keep = $false },
+    @{ Name = 'Jwt';           Regex = 'eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}'; Keep = $false },
+    @{ Name = 'Bearer';        Regex = '(?i)(bearer\s+)[A-Za-z0-9\-._~+/]{16,}=*'; Keep = $true },
+    @{ Name = 'XmlKeyValue';   Regex = "(?i)(key\s*=\s*[`"'](?:$script:SecretKeyWords)[`"']\s+value\s*=\s*)(`"[^`"]*`"|'[^']*')"; Keep = $true },
+    @{ Name = 'Assignment';    Regex = "(?i)((?:[`"']?(?:$script:SecretKeyWords)[`"']?)\s*[=:]\s*)(`"[^`"]*`"|'[^']*'|[^\r\n]+)"; Keep = $true }
 )
 
 function Test-SensitiveFile {
@@ -40,8 +61,8 @@ function Remove-SecretsFromText {
 
     $clean = $Text
     foreach ($secret in $script:SecretPatterns) {
-        if ($secret.Name -eq 'Assignment') {
-            # Mantem a chave da atribuicao (ex.: "password=") e troca apenas o valor
+        if ($secret.Keep) {
+            # Mantem a chave/prefixo (ex.: "password=", "Bearer ") e troca apenas o valor
             $clean = [regex]::Replace($clean, $secret.Regex, '${1}[REDACTED]')
         }
         else {
