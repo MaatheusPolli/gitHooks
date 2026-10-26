@@ -9,6 +9,8 @@ param(
 
 # 1. Configura Core e Diretorio
 $BaseDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Definition)
+# Diretorio de onde o git (ou o TortoiseGit) chamou o script: e o repositorio do usuario, nao o hub
+$callerDir = (Get-Location).ProviderPath
 
 # 1.1 Configura Encodings do PowerShell para evitar Mojibake ao ler STDOUT de programas externos (gemini.exe, etc)
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -85,19 +87,42 @@ $cleanMsgFile = $commitMsgFile.Trim('"')
 $cleanWorkDir = $workDir.Trim('"')
 if ($workDir -match '\"$') { $cleanWorkDir = $workDir -replace '\"$', '\' }
 
-# Tratamento do WorkDir (Se vier vazio ou %PATH%, usamos o diretorio do script como fallback)
+# O git passa o caminho da mensagem relativo ao repositorio: resolve antes de trocar de pasta
+if (-not [System.IO.Path]::IsPathRooted($cleanMsgFile)) { $cleanMsgFile = Join-Path $callerDir $cleanMsgFile }
+
+# Tratamento do WorkDir (Se vier vazio ou %PATH%, usamos o diretorio de quem chamou como fallback)
 if ($cleanWorkDir -eq "%PATH%" -or $cleanWorkDir -eq "%3" -or [string]::IsNullOrWhiteSpace($cleanWorkDir)) {
-    if ($source -and (Test-Path $source)) { $cleanWorkDir = $source } else { $cleanWorkDir = $BaseDir }
+    if ($source -and (Test-Path $source)) { $cleanWorkDir = $source } else { $cleanWorkDir = $callerDir }
+}
+
+# Nao sobrescreve mensagem que o usuario ja escreveu (-m, merge, squash, amend, template)
+if ($source -match "^(commit|merge|squash|message|template)$") {
+    Write-Log "INFO: Origem '$source' com mensagem do usuario. Mantida."
+    exit 0
+}
+# Arquivo ja com texto (que nao e so comentario do git) tambem e preservado.
+# Se nao for possivel ler o arquivo, nao escrevemos nele (na duvida, nao sobrescreve)
+$existingMsg = ""
+if (Test-Path $cleanMsgFile) {
+    try { $existingMsg = Get-Content $cleanMsgFile -Raw -ErrorAction Stop }
+    catch {
+        Write-Log "AVISO: nao foi possivel ler o arquivo de mensagem. Mantido: $($_.Exception.Message)"
+        exit 0
+    }
+}
+if ($existingMsg -match '(?m)^[^#\s]') {
+    Write-Log "INFO: Arquivo de mensagem ja tem texto. Mantido."
+    exit 0
 }
 
 try {
-    if (Test-Path $cleanWorkDir) { 
-        Set-Location $cleanWorkDir -ErrorAction SilentlyContinue 
+    if (Test-Path $cleanWorkDir) {
+        Set-Location $cleanWorkDir -ErrorAction SilentlyContinue
         Write-Log "INFO: Diretorio de trabalho: $cleanWorkDir"
     }
     else {
-        # Fallback seguro para o diretorio do script
-        Set-Location $BaseDir
+        # Fallback seguro para o diretorio de quem chamou (nunca o hub)
+        Set-Location $callerDir
     }
     
     # 3. Busca Diff

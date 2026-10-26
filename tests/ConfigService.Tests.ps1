@@ -5,8 +5,9 @@ BeforeAll {
 }
 
 Describe "Get-AppConfig" {
-    It "le valor do config/settings.txt" {
-        Get-AppConfig "PROMPT_FILE" | Should -Not -BeNullOrEmpty
+    It "o modelo versionado define PROMPT_FILE (nao depende do settings.txt local)" {
+        $example = Join-Path $script:Hub "config\settings.example.txt"
+        Get-Content $example -Raw | Should -Match "(?m)^PROMPT_FILE=\S+"
     }
 
     It "variavel de ambiente tem prioridade sobre o arquivo" {

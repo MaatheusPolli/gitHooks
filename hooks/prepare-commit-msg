@@ -2,5 +2,6 @@
 # Hook modular: GITHOOKS_HOME tem prioridade; o caminho padrao e gravado pelo instalador (setup/Install-All.ps1)
 HUB="${GITHOOKS_HOME:-__GITHOOKS_HOME__}"
 ACTION_SCRIPT="$HUB/actions/GenerateCommitMsg.ps1"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ACTION_SCRIPT" "$1" "$2"
+# O git roda o hook na raiz do repositorio: passamos esse diretorio como terceiro argumento
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ACTION_SCRIPT" "$1" "$2" "$(pwd -W 2>/dev/null || pwd)"
 exit 0
