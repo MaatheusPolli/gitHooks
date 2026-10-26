@@ -8,7 +8,7 @@ BeforeAll {
     New-Item -ItemType Directory -Force -Path $script:ShimDir | Out-Null
     $shimLines = @(
         '@echo off',
-        'if "%STUB_CLAUDE_FAIL%"=="1" exit /b 2',
+        'if "%STUB_CLAUDE_FAIL%"=="1" (echo sessao OAuth expirada 1>&2 & exit /b 2)',
         'more > "%~dp0last-stdin.txt"',
         'echo %* > "%~dp0last-args.txt"',
         'echo Resposta do stub claude'
@@ -53,6 +53,11 @@ Describe "Invoke-Claude" {
     It "lanca erro quando o CLI sai com codigo diferente de zero" {
         $env:STUB_CLAUDE_FAIL = "1"
         { Invoke-Claude "x" } | Should -Throw "*Claude CLI saiu*"
+    }
+
+    It "inclui o motivo da falha (stderr) na mensagem de erro" {
+        $env:STUB_CLAUDE_FAIL = "1"
+        { Invoke-Claude "x" } | Should -Throw "*sessao OAuth expirada*"
     }
 }
 

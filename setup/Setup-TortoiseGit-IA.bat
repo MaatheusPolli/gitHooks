@@ -40,17 +40,14 @@ set "PROJECT_ROOT=%CD%"
 popd
 
 :: 3. Criar arquivo de settings padrao se nao existir
+:: Copia o modelo versionado (ja com INCLUDE_UNTRACKED/INCLUDE_UNSTAGED=FALSE e todas as chaves)
 if not exist "%PROJECT_ROOT%\config\settings.txt" (
-    echo [3/3] Criando settings.txt padrao...
-    (
-        echo PROVIDER=Gemini
-        echo LANGUAGE=PT-BR
-        echo PROMPT_FILE=commit-msg.txt
-        echo INCLUDE_UNTRACKED=TRUE
-        echo INCLUDE_UNSTAGED=TRUE
-        echo CLEAR_LOG=True
-        echo LOG_PATH=C:\LOG-GitHooks\debug.log
-    ) > "%PROJECT_ROOT%\config\settings.txt"
+    echo [3/3] Criando settings.txt a partir do modelo...
+    if exist "%PROJECT_ROOT%\config\settings.example.txt" (
+        copy /y "%PROJECT_ROOT%\config\settings.example.txt" "%PROJECT_ROOT%\config\settings.txt" >nul
+    ) else (
+        echo [AVISO] config\settings.example.txt nao encontrado. Crie config\settings.txt manualmente.
+    )
 ) else (
     echo [OK] Arquivo de configuracao detectado.
 )

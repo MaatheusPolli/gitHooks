@@ -1,5 +1,6 @@
 ﻿# Importa os provedores de IA (.ps1 independentes)
 $LibDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+. (Join-Path $LibDir "ProcessService.ps1")
 . (Join-Path $LibDir "providers\GeminiProvider.ps1")
 . (Join-Path $LibDir "providers\ClaudeProvider.ps1")
 . (Join-Path $LibDir "providers\CopilotProvider.ps1")
