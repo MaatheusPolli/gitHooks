@@ -8,14 +8,16 @@ Este projeto é um ecossistema modular desenhado para automatizar e padronizar a
 
 ```text
 <pasta-do-projeto>/gitHooks/
-├── lib/            # Core: AIService, ConfigService, GitService, LogService, PathService (.ps1)
-│   └── providers/  # GeminiProvider, ClaudeProvider, CopilotProvider
-├── prompts/        # Templates editáveis: commit-msg.txt, commit-msg-senior.txt
-├── actions/        # Orquestradores: GenerateCommitMsg.ps1, PerformCodeReview.ps1 (em evolução)
-├── hooks/          # prepare-commit-msg (integração com o git commit)
+├── lib/            # Core: AIService, ConfigService, GitService, LogService, PathService,
+│                   #       ProcessService, SecretFilter, CommitFormat (.ps1)
+│   └── providers/  # GeminiProvider, ClaudeProvider (CopilotProvider está desativado)
+├── prompts/        # Templates editáveis: commit-msg.txt, commit-msg-senior.txt, code-review.txt
+├── actions/        # Orquestradores: GenerateCommitMsg.ps1 (commit), PerformCodeReview.ps1 (pre-push)
+├── hooks/          # prepare-commit-msg (git commit) e pre-push (revisão antes do push)
 ├── setup/          # Setup-TortoiseGit-IA.bat, Instalar-GeminiCLI.bat, Install-All.ps1
 ├── diagnostics/    # Verify-Environment.ps1, Test-AllProviders.ps1, Diagnostico-Hooks-IA.bat
-└── config/         # settings.txt (provedor, idioma, Smart Diff, logs)
+├── tests/          # Testes Pester (rodam no CI)
+└── config/         # settings.txt (local) e settings.example.txt (modelo versionado)
 ```
 
 > Os scripts resolvem a pasta pela própria localização; se preferir, defina a variável de ambiente `GITHOOKS_HOME` com o caminho do projeto.
@@ -26,14 +28,14 @@ Este projeto é um ecossistema modular desenhado para automatizar e padronizar a
 
 A automação foi construída para ser um **assistente invisível**. Se algo falhar, o fluxo de trabalho original do Git permanece intacto:
 - **Falha Segura:** Se a IA falhar ou a chave cair, a janela de commit abre normalmente (vazia ou com o texto que você já digitou) para preenchimento manual.
-- **Performance:** O script executa em milissegundos e não trava a interface do TortoiseGit ou do terminal.
+- **Performance:** A chamada à IA leva alguns segundos. Cada provedor tem um timeout (60 s por padrão); ao estourar, o commit segue sem a mensagem sugerida.
 - **Retorno Positivo:** O sistema sempre retorna 'sucesso' para o Git, garantindo que o processo de commit nunca seja interrompido por erros técnicos da automação.
 
 ---
 
 ## 📋 Requisitos e Tecnologias
 
-1.  **PowerShell 5.1+:** Linguagem principal do projeto para integração nativa com o Windows. (Arquivos `.ps1` e `.psm1`).
+1.  **PowerShell 5.1+:** Linguagem principal do projeto para integração nativa com o Windows (arquivos `.ps1`).
 2.  **Node.js (LTS):** Necessário para rodar os CLIs de IA (Gemini-CLI).
 3.  **Local do projeto:** Não é necessário unidade Z:. Basta a pasta do projeto (opcionalmente, defina `GITHOOKS_HOME`).
 4.  **API Key:** Uma chave ativa do Google AI Studio (Gratuita).
@@ -62,14 +64,15 @@ Se você quer que a IA funcione também ao digitar `git commit` no terminal, exe
 
 Edite `<pasta-do-projeto>\gitHooks\config\settings.txt` para ajustar o comportamento:
 
-- **PROVIDER:** `Gemini` (Padrão), `Claude` ou `Copilot`.
+- **PROVIDER:** `Gemini` (Padrão) ou `Claude`. O `Copilot` está desativado: o `gh copilot` é interativo e não gera mensagens de commit.
 - **PROMPT_FILE:** 
     - `commit-msg.txt`: Mensagem padrão, direta e concisa.
     - `commit-msg-senior.txt`: Mensagem avançada com análise de impacto e riscos para arquitetos.
 - **LANGUAGE:** `PT-BR`.
 - **MAX_DIFF_CHARS:** Limite total de caracteres enviados para a IA (Padrão: 80.000). Evita lentidão em commits gigantes.
 - **IGNORED_EXTENSIONS:** Lista de extensões que a IA deve ignorar no diff detalhado (ex: `.map, .bin`).
-- **INCLUDE_UNTRACKED/INCLUDE_UNSTAGED:** Define se a IA deve "olhar" para arquivos que você ainda não deu `git add`. **Recomendado: FALSE.** No `settings.txt` atual os dois estão `TRUE`; volte para `FALSE` para não enviar arquivos não versionados (ex.: `.env`) à IA.
+- **INCLUDE_UNTRACKED/INCLUDE_UNSTAGED:** Define se a IA deve "olhar" para arquivos que você ainda não deu `git add`. **Recomendado: FALSE.** O modelo `settings.example.txt` já vem assim; se o seu `settings.txt` local estiver `TRUE`, volte para `FALSE` para não enviar arquivos não versionados à IA.
+- **CODE_REVIEW_ENABLED:** `TRUE` ativa a revisão automática antes do `git push` (hook `pre-push`), que envia o diff à IA. Padrão: `FALSE`.
 - **PRIORITY_EXTENSIONS / DIFF_CONTEXT_LINES / CLEAR_LOG:** Extensões com mais espaço no diff, linhas de contexto (padrão 1) e limpeza do log a cada execução.
 - **LOG_PATH:** Local do log (Default: `C:\LOG-GitHooks\debug.log`).
 
@@ -104,6 +107,15 @@ Para que a IA preencha automaticamente sua mensagem de commit na interface visua
 
 ---
 
+## 🔒 Segurança do envio à IA
+
+Antes de qualquer diff sair da sua máquina:
+- Arquivos sensíveis (`.env*`, `*.pem`, `*.pfx`, `*.key`, `appsettings*.json`, `web.config`, `credentials.json` e outros) são omitidos; só o nome aparece no sumário.
+- Chaves e credenciais conhecidas (Google, OpenAI, GitHub, AWS, Slack, JWT, blocos PEM e atribuições como `password=`) são mascaradas com `[REDACTED]`.
+- O Claude roda com as ferramentas desativadas (`--tools=""`): o modelo só recebe o diff e não lê arquivos do repositório por conta própria.
+
+---
+
 ## 🎨 5. Customização de Prompts
 
 Você pode criar seus próprios templates na pasta `prompts/`. O sistema substitui automaticamente:
@@ -111,12 +123,14 @@ Você pode criar seus próprios templates na pasta `prompts/`. O sistema substit
 - `{{BRANCH}}`: O nome da branch atual (ex: 12345).
 - `{{AI_CLI}}`: O motor utilizado.
 
+O formato da primeira linha do commit deve seguir Conventional Commits (`tipo(escopo): descrição`). Se a IA fugir do formato, o texto bruto é mantido e o log registra o aviso.
+
 ---
 
 ## 🔍 Resolução de Problemas (Troubleshooting)
 
 - **A mensagem não aparece:** Use o script `<pasta-do-projeto>\gitHooks\diagnostics\Verify-Environment.ps1` para validar a conexão.
-- **Erro de Quota:** O Gemini possui limites. Se falhar, o log registrará "Erro de Quota" e você poderá preencher manualmente.
+- **A IA falhou:** Se o CLI sair com erro (cota do Gemini, sessão expirada, login pendente) ou estourar o timeout, o log registra o motivo (início do stderr do CLI) e você preenche a mensagem manualmente.
 - **Verificar Logs:** Consulte o log em `C:\LOG-GitHooks\debug.log` para ver o rastro técnico da execução.
 
 ## Licença

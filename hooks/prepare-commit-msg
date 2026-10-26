@@ -1,4 +1,4 @@
-﻿#!/bin/sh
+#!/bin/sh
 # Hook modular: GITHOOKS_HOME tem prioridade; o caminho padrao e gravado pelo instalador (setup/Install-All.ps1)
 HUB="${GITHOOKS_HOME:-__GITHOOKS_HOME__}"
 ACTION_SCRIPT="$HUB/actions/GenerateCommitMsg.ps1"

@@ -26,6 +26,8 @@ function Get-AppConfig {
             }
         }
     } catch { }
+    # Chave ausente tambem usa o padrao (antes so o caso "arquivo inexistente" tinha padrao)
+    if ($key -eq "PROVIDER") { return "Gemini" }
     return $null
 }
 
