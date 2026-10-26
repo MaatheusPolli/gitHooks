@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Position = 0)]
     [string]$arg1,
     [Parameter(Position = 1)]
@@ -15,7 +15,8 @@ $callerDir = (Get-Location).ProviderPath
 # 1.1 Configura Encodings do PowerShell para evitar Mojibake ao ler STDOUT de programas externos (gemini.exe, etc)
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
+# UTF-8 sem BOM: com BOM o CLI recebe bytes extras no inicio do prompt
+$OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 
 # Detecção de quem chamou (Git prepare-commit-msg vs TortoiseGit Start-Commit)
 $commitMsgFile = ""
@@ -139,7 +140,7 @@ try {
         $promptPath = Join-Path $BaseDir "prompts\commit-msg.txt"
     }
     
-    $promptTemplate = Get-Content $promptPath -Raw
+    $promptTemplate = Get-Content $promptPath -Raw -Encoding UTF8
     $fullPrompt = $promptTemplate.Replace("{{DIFF}}", $diffContent).Replace("{{BRANCH}}", $branch).Replace("{{AI_CLI}}", "$aiProvider-CLI")
 
     $suggestion = Get-AISuggestion -prompt $fullPrompt -provider $aiProvider

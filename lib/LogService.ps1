@@ -1,4 +1,4 @@
-function Write-Log {
+﻿function Write-Log {
     param(
         [string]$message,
         [switch]$Clear # Se passar -Clear, ele limpa o arquivo

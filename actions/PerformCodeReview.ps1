@@ -8,7 +8,8 @@ param(
 $BaseDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Definition)
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
+# UTF-8 sem BOM: com BOM o CLI recebe bytes extras no inicio do prompt
+$OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 
 . (Join-Path $BaseDir "lib\PathService.ps1")
 . (Join-Path $BaseDir "lib\ConfigService.ps1")
@@ -49,7 +50,7 @@ try {
     $aiProvider = Get-AppConfig "PROVIDER"
     $branch = Get-GitBranch
     $promptPath = Join-Path $BaseDir "prompts\code-review.txt"
-    $template = Get-Content $promptPath -Raw
+    $template = Get-Content $promptPath -Raw -Encoding UTF8
     $fullPrompt = $template.Replace("{{DIFF}}", $diff).Replace("{{BRANCH}}", $branch).Replace("{{AI_CLI}}", "$aiProvider-CLI")
 
     Write-Host "--- Revisão automática de código ($aiProvider, base: $Base) ---" -ForegroundColor Cyan

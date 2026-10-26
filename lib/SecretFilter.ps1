@@ -1,4 +1,4 @@
-# Filtro de segredos: impede que arquivos sensiveis e chaves cheguem ao provedor de IA externo
+﻿# Filtro de segredos: impede que arquivos sensiveis e chaves cheguem ao provedor de IA externo
 
 # Nomes de arquivo (comparados com -like, sem diretorio) que nunca vao no prompt
 $script:SensitiveFilePatterns = @(

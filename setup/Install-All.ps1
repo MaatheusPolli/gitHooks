@@ -1,4 +1,4 @@
-# 🤖 Git AI Hooks - Setup Completo (instalar / desinstalar, idempotente)
+﻿# 🤖 Git AI Hooks - Setup Completo (instalar / desinstalar, idempotente)
 # Uso: .\Install-All.ps1                          -> instala no repositorio da pasta atual
 #      .\Install-All.ps1 -RepoPath <pasta>        -> instala no repositorio informado
 #      .\Install-All.ps1 [-RepoPath <pasta>] -Uninstall -> remove os hooks deste projeto

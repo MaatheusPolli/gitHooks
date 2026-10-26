@@ -1,4 +1,4 @@
-# 🔍 Diagnóstico de Ambiente - Git AI Hooks
+﻿# 🔍 Diagnóstico de Ambiente - Git AI Hooks
 # A raiz do hub e descoberta a partir da pasta diagnostics/ (funciona em qualquer drive)
 $BaseDir = Split-Path -Parent $PSScriptRoot
 . (Join-Path $BaseDir "lib\PathService.ps1")

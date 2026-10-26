@@ -1,4 +1,4 @@
-# Validacao do formato Conventional Commits (<tipo>(<escopo>)?!?: <descricao>)
+﻿# Validacao do formato Conventional Commits (<tipo>(<escopo>)?!?: <descricao>)
 # A validacao e apenas informativa: se nao casar, o texto bruto da IA e mantido (fallback)
 
 $script:ConventionalCommitRegex = '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^)\r\n]+\))?!?: \S.*'
