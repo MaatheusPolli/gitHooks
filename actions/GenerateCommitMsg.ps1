@@ -64,22 +64,12 @@ if ($commitMsgFile -match "%(MSGFILE|PATH|[1-4])%") {
     Write-Log "ERRO DE CONFIGURACAO: Variavel literal detectada. Remova as aspas e os %VAR% do TortoiseGit. Deixe apenas o caminho do script."
     exit 0
 }
-# MODO DE RECUPERACAO DO TORTOISEGIT
-# Se o TortoiseGit nao substituiu %MSGFILE%, tentamos encontrar o arquivo temporario mais recente do Tortoise
+# Sem arquivo de mensagem, nao ha onde escrever: sai sem tocar em nada.
+# (Antes havia uma "recuperacao" que pegava o *.tmp mais recente de %TEMP%, de qualquer
+# programa, e podia sobrescrever arquivos alheios.)
 if ($commitMsgFile -eq "%MSGFILE%" -or $commitMsgFile -eq "%4" -or [string]::IsNullOrWhiteSpace($commitMsgFile)) {
-    Write-Log "AVISO: TortoiseGit falhou ao passar %MSGFILE%. Tentando recuperacao automatica..."
-    $tempDir = [System.IO.Path]::GetTempPath()
-    # Os arquivos do TortoiseGit geralmente comecam com 'tmp' e sao criados segundos antes
-    $lastTmp = Get-ChildItem -Path $tempDir -Filter "*.tmp" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    
-    if ($lastTmp) {
-        $commitMsgFile = $lastTmp.FullName
-        Write-Log "RECURSO: Arquivo temporario provavel encontrado: $commitMsgFile"
-    }
-    else {
-        Write-Log "ERRO: Nao foi possivel localizar o arquivo de mensagem do TortoiseGit."
-        exit 0
-    }
+    Write-Log "ERRO: TortoiseGit nao passou o arquivo de mensagem (%MSGFILE%). Nada foi alterado."
+    exit 0
 }
 
 # Limpeza de parametros
