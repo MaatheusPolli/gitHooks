@@ -56,7 +56,8 @@ try {
     $fullPrompt = $template.Replace("{{BRANCH}}", $branch).Replace("{{AI_CLI}}", "$aiProvider-CLI").Replace("{{DIFF}}", $diff)
 
     Write-Host "--- Revisão automática de código ($aiProvider, base: $Base) ---" -ForegroundColor Cyan
-    $review = Get-AISuggestion -prompt $fullPrompt -provider $aiProvider
+    # Revisao de um diff inteiro leva mais que um commit: timeout de 180 s (commit usa 60 s)
+    $review = Get-AISuggestion -prompt $fullPrompt -provider $aiProvider -TimeoutSeconds 180
 
     if ([string]::IsNullOrWhiteSpace($review)) {
         Write-Host "A IA não retornou revisão." -ForegroundColor Yellow

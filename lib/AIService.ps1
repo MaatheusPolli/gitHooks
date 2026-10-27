@@ -6,11 +6,11 @@ $LibDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 . (Join-Path $LibDir "providers\CopilotProvider.ps1")
 
 function Get-AISuggestion {
-    param([Parameter(Mandatory = $true)][string]$prompt, [string]$provider = "Gemini")
+    param([Parameter(Mandatory = $true)][string]$prompt, [string]$provider = "Gemini", [int]$TimeoutSeconds = 60)
     try {
         switch ($provider) {
-            "Gemini" { return Invoke-Gemini $prompt }
-            "Claude" { return Invoke-Claude $prompt }
+            "Gemini" { return Invoke-Gemini $prompt -TimeoutSeconds $TimeoutSeconds }
+            "Claude" { return Invoke-Claude $prompt -TimeoutSeconds $TimeoutSeconds }
             "Copilot" { return Invoke-Copilot $prompt }
             Default { throw "Provider '$provider' nao reconhecido." }
         }
