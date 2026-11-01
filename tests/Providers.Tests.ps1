@@ -26,6 +26,7 @@ AfterAll {
 
 Describe "Invoke-Claude" {
     BeforeEach { $env:STUB_CLAUDE_FAIL = "0" }
+    AfterEach { $env:STUB_CLAUDE_FAIL = "0" }
 
     It "envia o prompt pelo stdin em modo -p e devolve a resposta" {
         $result = Invoke-Claude "Analise este diff"
@@ -40,7 +41,7 @@ Describe "Invoke-Claude" {
 
     It "desativa as ferramentas do CLI (nao le arquivos do repositorio sozinho)" {
         Invoke-Claude "qualquer" | Out-Null
-        (Get-Content (Join-Path $script:ShimDir "last-args.txt") -Raw) | Should -Match "-p --tools="
+        (Get-Content (Join-Path $script:ShimDir "last-args.txt") -Raw) | Should -Match '"-p" "--tools="'
     }
 
     It "lanca erro quando o CLI sai com codigo diferente de zero" {

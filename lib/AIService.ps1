@@ -6,7 +6,7 @@ $LibDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 . (Join-Path $LibDir "providers\CopilotProvider.ps1")
 
 function Get-AISuggestion {
-    param([Parameter(Mandatory = $true)][string]$prompt, [string]$provider = "Gemini", [int]$TimeoutSeconds = 60)
+    param([Parameter(Mandatory = $true)][string]$prompt, [string]$provider = "Gemini", [ValidateRange(1, 3600)][int]$TimeoutSeconds = 60)
     try {
         switch ($provider) {
             "Gemini" { return Invoke-Gemini $prompt -TimeoutSeconds $TimeoutSeconds }

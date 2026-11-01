@@ -4,7 +4,11 @@ function Test-IgnoredFile {
     param([string]$File, [string[]]$Patterns)
     $lower = $File.ToLower()
     foreach ($p in $Patterns) {
-        if ($p -and $lower.EndsWith($p)) { return $true }
+        $pat = $p.Trim().ToLower()
+        if (-not $pat) { continue }
+        # Padrao sem ponto ("map") vira extensao (".map"): nao casa "sitemap"
+        if (-not $pat.StartsWith(".")) { $pat = "." + $pat }
+        if ($lower.EndsWith($pat)) { return $true }
     }
     return $false
 }
@@ -142,7 +146,15 @@ function Get-GitReviewDiff {
     $files = @(git -c core.quotepath=off diff --name-only $mergeBase $Head | Where-Object { -not (Test-SensitiveFile $_) })
     if ($files.Count -eq 0) { return "" }
 
-    $diff = (git diff "-U$contextLines" -w --no-color --no-ext-diff $mergeBase $Head -- @files) -join "`n"
+    # Em lotes: uma lista grande de caminhos estoura o limite da linha de comando do Windows
+    $diffLines = @()
+    for ($i = 0; $i -lt $files.Count; $i += 200) {
+        $end = [Math]::Min($i + 199, $files.Count - 1)
+        $chunk = @($files[$i..$end])
+        $diffLines += git diff "-U$contextLines" -w --no-color --no-ext-diff $mergeBase $Head -- @chunk
+        if ($LASTEXITCODE -ne 0) { return $null }
+    }
+    $diff = $diffLines -join "`n"
     $diff = Remove-SecretsFromText $diff
 
     if ($diff.Length -gt $MaxChars) {
